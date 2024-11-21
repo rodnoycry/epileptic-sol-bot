@@ -68,7 +68,8 @@ def send_usage_instructions(update: Update):
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    
+    is_group_chat = update.message.chat.type in ['group', 'supergroup']
+
     # Handle PNG file
     if update.message.document and update.message.document.file_name.lower().endswith('.png'):
         logger.info(f"User {user_id} sent a PNG file")
@@ -78,7 +79,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         output_path = os.path.abspath(f"output/output_{user_id}.mp4")
         await file.download_to_drive(input_path)
 
-        await update.message.reply_text("🎬 Processing your image... Please wait.")
+        # Only send processing message in private chats
+        if not is_group_chat:
+            await update.message.reply_text("🎬 Processing your image... Please wait.")
 
         try:
             # Your video generation function here
@@ -87,7 +90,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Send the generated video
             with open(output_path, 'rb') as video:
                 await update.message.reply_video(video)
-                await update.message.reply_text("That's it! Download the video, share it or use a profile pic\n\nShow the 🟥🟩 to the world!")
+                # Only send success message in private chats
+                if not is_group_chat:
+                    await update.message.reply_text("That's it! Download the video, share it or use a profile pic\n\nShow the 🟥🟩 to the world!")
             
             logger.info(f"Successfully processed video for user {user_id}")
             
@@ -97,6 +102,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         except Exception as e:
             logger.error(f"Error processing video for user {user_id}: {str(e)}")
+            # Send error message in both private and group chats
             await update.message.reply_text(
                 f"❌ Sorry, something went wrong. Please try again or contact {SUPPORT_USERNAME} for support.",
                 parse_mode="markdown"
@@ -105,6 +111,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Handle photo (PNG sent as image)
     elif update.message.photo:
         logger.info(f"User {user_id} sent a photo instead of file")
+        # Send warning in both private and group chats
         await update.message.reply_text(
             "⚠️ Please send your PNG image as a file, not as a photo!\n\n"
             "This is important because sending as a photo will compress the image "
@@ -120,6 +127,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Handle all other incorrect messages
     else:
         logger.info(f"User {user_id} sent an invalid message type")
+        # Send usage instructions in both private and group chats
         await send_usage_instructions(update)
 
 
@@ -135,7 +143,8 @@ def main():
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CommandHandler('help', help))
     application.add_handler(MessageHandler(
-        filters.Document.ALL | filters.PHOTO | filters.TEXT, 
+        (filters.Document.ALL | filters.PHOTO | filters.TEXT) & 
+        (filters.ChatType.PRIVATE | filters.ChatType.GROUP),
         handle_message
     ))
 
