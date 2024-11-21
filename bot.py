@@ -21,13 +21,14 @@ WAITING_FOR_PNG = 1
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"User {update.effective_user.id} started the bot")
+    escaped_underscore = "\\_"
     await update.message.reply_animation(
         animation=open('messages/start.gif', 'rb'),
         caption=
             "Welcome to 🟥🟩 Video Generator\n\n"
             "This bot will create a video with your PNG image overlaid on 🟥🟩 background.\n\n"
             "Send your PNG image with transparent background, and this bot will generate the video for you.\n"
-            f"{r'\_' * 31}\n\n"
+            f"{escaped_underscore * 31}\n\n"
             "New features coming soon!\n"
             "- Video overlaying\n"
             "- Automatic background removal\n"
