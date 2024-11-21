@@ -170,7 +170,7 @@ def main():
     application.add_handler(MessageHandler(
         (filters.Document.ALL | filters.PHOTO | filters.TEXT) & 
         (filters.ChatType.PRIVATE | 
-         (filters.ChatType.GROUP & (filters.Entity("mention") | filters.CaptionEntity("mention") | filters.REPLY))),
+         ((filters.ChatType.GROUP | filters.ChatType.GROUPS | filters.ChatType.SUPERGROUP) & (filters.Entity("mention") | filters.CaptionEntity("mention") | filters.REPLY))),
         handle_message
     ))
 
