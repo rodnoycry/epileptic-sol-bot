@@ -53,8 +53,8 @@ async def handle_png(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Download the file
     file = await context.bot.get_file(update.message.document.file_id)
-    input_path = f"temp_{update.message.from_user.id}.png"
-    output_path = f"output_{update.message.from_user.id}.mp4"
+    input_path = f"temp/temp_{update.message.from_user.id}.png"
+    output_path = f"output/output_{update.message.from_user.id}.mp4"
     await file.download_to_drive(input_path)
 
     await update.message.reply_text("🎬 Processing your video... Please wait.")
