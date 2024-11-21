@@ -23,7 +23,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"User {update.effective_user.id} started the bot")
     escaped_underscore = "\\_"
     await update.message.reply_animation(
-        animation=open('messages/start.gif', 'rb'),
+        animation=open(os.path.abspath('messages/start.gif'), 'rb'),
         caption=
             "Welcome to 🟥🟩 Video Generator\n\n"
             "This bot will create a video with your PNG image overlaid on 🟥🟩 background.\n\n"
@@ -74,8 +74,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.info(f"User {user_id} sent a PNG file")
         # Download the file
         file = await context.bot.get_file(update.message.document.file_id)
-        input_path = f"temp/temp_{user_id}.png"
-        output_path = f"output/output_{user_id}.mp4"
+        input_path = os.path.abspath(f"temp/temp_{user_id}.png")
+        output_path = os.path.abspath(f"output/output_{user_id}.mp4")
         await file.download_to_drive(input_path)
 
         await update.message.reply_text("🎬 Processing your image... Please wait.")
