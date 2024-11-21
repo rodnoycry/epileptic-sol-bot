@@ -23,10 +23,17 @@ WAITING_FOR_PNG = 1
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"User {update.effective_user.id} started the bot")
     await update.message.reply_text(
-        "🎥 Welcome to Background Video Generator Bot!\n\n"
-        "I can help you create a video with your PNG image overlaid on our special theme background.\n\n"
-        "Simply send me your PNG image with transparent background, and I'll generate the video for you.\n\n"
-        "Type /help for more information."
+        "Welcome to 🟥🟩 Video Generator\n\n"
+        "This bot will create a video with your PNG image overlaid on 🟥🟩 background.\n\n"
+        "Send your PNG image with transparent background, and this bot will generate the video for you.\n"
+        "________________________________________________________________\n\n"
+        "New features coming soon!\n"
+        "- Video overlaying\n"
+        "- Automatic background removal\n"
+        "- Website version\n\n"
+        "If you want to see these feature as soon as possible, please consider donating some SOL to developer's wallet:\n"
+        f"`{SOLANA_ADDRESS}`\n\n"
+        "I do this stuff for the community, but I will really appreciate the support and you will speed up the development process"
     )
     return WAITING_FOR_PNG
 
@@ -37,11 +44,11 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"• For technical support, contact {SUPPORT_USERNAME} in {MEMECOIN_CHAT} or DM\n"
         f"• Need help with PNG preparation? You can use Photoshop, online services, or contact {SUPPORT_USERNAME}\n\n"
         "🔗 Contract Address:\n"
-        f"{CONTRACT_ADDRESS}\n\n"
+        f"`{CONTRACT_ADDRESS}`\n\n"
         "💰 Support the development:\n"
         f"• Solana address: `{SOLANA_ADDRESS}`\n"
         f"• For other donation methods, please DM {SUPPORT_USERNAME}\n\n"
-        "Web service coming soon! Your donations will help with development, domain, and hosting costs."
+        "Web service and new features coming soon! Your donations will help with speeding up the development and will cover hosting costs"
     )
 
 def send_usage_instructions(update: Update):
@@ -74,6 +81,7 @@ async def handle_png(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Send the generated video
             with open(output_path, 'rb') as video:
                 await update.message.reply_video(video)
+                await update.message.reply_text("That's it! Download the video, share it or use a profile pic, show 🟥🟩 to the world")
             
             logger.info(f"Successfully processed video for user {user_id}")
             
