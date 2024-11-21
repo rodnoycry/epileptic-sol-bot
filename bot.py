@@ -60,7 +60,8 @@ def send_usage_instructions(update: Update):
         f"Need help? Contact {SUPPORT_USERNAME}"
     )
 
-async def handle_png(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
     # Handle PNG file
@@ -72,7 +73,7 @@ async def handle_png(update: Update, context: ContextTypes.DEFAULT_TYPE):
         output_path = f"output/output_{user_id}.mp4"
         await file.download_to_drive(input_path)
 
-        await update.message.reply_text("🎬 Processing your video... Please wait.")
+        await update.message.reply_text("🎬 Processing your image... Please wait.")
 
         try:
             # Your video generation function here
@@ -81,7 +82,7 @@ async def handle_png(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Send the generated video
             with open(output_path, 'rb') as video:
                 await update.message.reply_video(video)
-                await update.message.reply_text("That's it! Download the video, share it or use a profile pic, show 🟥🟩 to the world")
+                await update.message.reply_text("That's it! Download the video, share it or use a profile pic\n\nShow the 🟥🟩 to the world!")
             
             logger.info(f"Successfully processed video for user {user_id}")
             
@@ -114,7 +115,6 @@ async def handle_png(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.info(f"User {user_id} sent an invalid message type")
         await send_usage_instructions(update)
 
-    return WAITING_FOR_PNG
 
 def main():
     # Create required directories
@@ -124,18 +124,13 @@ def main():
     logger.info("Starting bot...")
     application = Application.builder().token(BOT_TOKEN).build()
 
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
-        states={
-            WAITING_FOR_PNG: [
-                MessageHandler(filters.Document.ALL | filters.PHOTO | filters.TEXT, handle_png)
-            ]
-        },
-        fallbacks=[CommandHandler('start', start)]
-    )
-
-    application.add_handler(conv_handler)
+    # Add handlers
+    application.add_handler(CommandHandler('start', start))
     application.add_handler(CommandHandler('help', help))
+    application.add_handler(MessageHandler(
+        filters.Document.ALL | filters.PHOTO | filters.TEXT, 
+        handle_message
+    ))
 
     logger.info("Bot started successfully")
     application.run_polling()
