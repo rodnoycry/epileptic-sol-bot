@@ -34,7 +34,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "- Website version\n\n"
             "If you want to see these feature as soon as possible, please consider donating some SOL to developer's wallet:\n"
             f"`{SOLANA_ADDRESS}`\n\n"
-            "I do this stuff for the community, but I will really appreciate the support and you will speed up the development process ❤️",
+            "I do this stuff for the community, but I will really appreciate the support and you will speed up the development process \u2764\ufe0f",
         parse_mode="markdown"
     )
     return WAITING_FOR_PNG
