@@ -1,7 +1,6 @@
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import os
-from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
 from merge import create_overlay_video
 from logger import logger
@@ -22,18 +21,21 @@ WAITING_FOR_PNG = 1
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"User {update.effective_user.id} started the bot")
-    await update.message.reply_text(
-        "Welcome to 🟥🟩 Video Generator\n\n"
-        "This bot will create a video with your PNG image overlaid on 🟥🟩 background.\n\n"
-        "Send your PNG image with transparent background, and this bot will generate the video for you.\n"
-        "________________________________________________________________\n\n"
-        "New features coming soon!\n"
-        "- Video overlaying\n"
-        "- Automatic background removal\n"
-        "- Website version\n\n"
-        "If you want to see these feature as soon as possible, please consider donating some SOL to developer's wallet:\n"
-        f"`{SOLANA_ADDRESS}`\n\n"
-        "I do this stuff for the community, but I will really appreciate the support and you will speed up the development process"
+    await update.message.reply_animation(
+        animation=open('messages/start.gif', 'rb'),
+        caption=
+            "Welcome to 🟥🟩 Video Generator\n\n"
+            "This bot will create a video with your PNG image overlaid on 🟥🟩 background.\n\n"
+            "Send your PNG image with transparent background, and this bot will generate the video for you.\n"
+            f"{"\\_" * 48}\n\n"
+            "New features coming soon!\n"
+            "- Video overlaying\n"
+            "- Automatic background removal\n"
+            "- Website version\n\n"
+            "If you want to see these feature as soon as possible, please consider donating some SOL to developer's wallet:\n"
+            f"`{SOLANA_ADDRESS}`\n\n"
+            "I do this stuff for the community, but I will really appreciate the support and you will speed up the development process ❤️",
+        parse_mode="markdown"
     )
     return WAITING_FOR_PNG
 
@@ -48,7 +50,8 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "💰 Support the development:\n"
         f"• Solana address: `{SOLANA_ADDRESS}`\n"
         f"• For other donation methods, please DM {SUPPORT_USERNAME}\n\n"
-        "Web service and new features coming soon! Your donations will help with speeding up the development and will cover hosting costs"
+        "Web service and new features coming soon! Your donations will help with speeding up the development and will cover hosting costs",
+        parse_mode="markdown"
     )
 
 def send_usage_instructions(update: Update):
@@ -57,7 +60,8 @@ def send_usage_instructions(update: Update):
         "1. Send a PNG file with transparent background\n"
         "2. Make sure to send it as a file, not as a photo to preserve transparency\n"
         "3. Wait for the bot to process your image\n\n"
-        f"Need help? Contact {SUPPORT_USERNAME}"
+        f"Need help? Contact {SUPPORT_USERNAME}",
+        parse_mode="markdown"
     )
 
 
@@ -93,7 +97,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             logger.error(f"Error processing video for user {user_id}: {str(e)}")
             await update.message.reply_text(
-                f"❌ Sorry, something went wrong. Please try again or contact {SUPPORT_USERNAME} for support."
+                f"❌ Sorry, something went wrong. Please try again or contact {SUPPORT_USERNAME} for support.",
+                parse_mode="markdown"
             )
 
     # Handle photo (PNG sent as image)
@@ -107,7 +112,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "1. Click the file attachment icon (📎)\n"
             "2. Select 'File'\n"
             "3. Choose your PNG image\n"
-            "4. Send it to the bot without compression"
+            "4. Send it to the bot without compression",
+            parse_mode="markdown"
         )
     
     # Handle all other incorrect messages
