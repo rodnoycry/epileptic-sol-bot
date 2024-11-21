@@ -70,6 +70,31 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     is_group_chat = update.message.chat.type in ['group', 'supergroup']
 
+    # In group chats, only respond if the bot is mentioned
+    if is_group_chat:
+        # Get bot's username
+        bot_username = context.bot.username
+        # Check if message mentions the bot
+        message_mentions_bot = False
+        
+        # Check text mentions
+        if update.message.entities:
+            for entity in update.message.entities:
+                if entity.type == 'mention':
+                    mentioned_username = update.message.text[entity.offset:entity.offset + entity.length]
+                    if mentioned_username == f"@{bot_username}":
+                        message_mentions_bot = True
+                        break
+        
+        # Check if bot was replied to
+        if update.message.reply_to_message and update.message.reply_to_message.from_user.id == context.bot.id:
+            message_mentions_bot = True
+
+        # If bot wasn't mentioned in group chat, return
+        if not message_mentions_bot:
+            return
+
+    # Rest of your existing code...
     # Handle PNG file
     if update.message.document and update.message.document.file_name.lower().endswith('.png'):
         logger.info(f"User {user_id} sent a PNG file")
