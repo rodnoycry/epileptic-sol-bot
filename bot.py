@@ -27,7 +27,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Welcome to 🟥🟩 Video Generator\n\n"
             "This bot will create a video with your PNG image overlaid on 🟥🟩 background.\n\n"
             "Send your PNG image with transparent background, and this bot will generate the video for you.\n"
-            f"{"\\_" * 48}\n\n"
+            f"{"\\_" * 31}\n\n"
             "New features coming soon!\n"
             "- Video overlaying\n"
             "- Automatic background removal\n"
