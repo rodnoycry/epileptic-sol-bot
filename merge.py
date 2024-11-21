@@ -53,16 +53,25 @@ def create_overlay_video(input_video, overlay_image, output_video):
     scale_w = image_info['width'] / video_info['width']
     scale_h = image_info['height'] / video_info['height']
     
-    # Use the larger scaling factor to ensure image fits
-    scale_factor = max(scale_w, scale_h)
+    # Determine the appropriate scaling approach
+    if scale_w > scale_h:
+        # Fit to width
+        new_width = image_info['width']
+        new_height = int(video_info['height'] * scale_w)
+    else:
+        # Fit to height
+        new_height = image_info['height']
+        new_width = int(video_info['width'] * scale_h)
     
-    # Calculate new video dimensions
-    new_width = int(video_info['width'] * scale_factor)
-    new_height = int(video_info['height'] * scale_factor)
+    # Ensure dimensions are even (required by some codecs)
+    new_width = (new_width + 1) & ~1
+    new_height = (new_height + 1) & ~1
     
-    # Calculate padding to center the video
-    pad_x = max(0, (image_info['width'] - new_width) // 2)
-    pad_y = max(0, (image_info['height'] - new_height) // 2)
+    # Calculate padding
+    pad_width = max(new_width, image_info['width'])
+    pad_height = max(new_height, image_info['height'])
+    pad_x = (pad_width - new_width) // 2
+    pad_y = (pad_height - new_height) // 2
     
     cmd = [
         'ffmpeg', '-y',
@@ -70,12 +79,18 @@ def create_overlay_video(input_video, overlay_image, output_video):
         '-i', overlay_image,
         '-filter_complex',
         f'[0:v]scale={new_width}:{new_height}[scaled];'
-        f'[scaled]pad={image_info["width"]}:{image_info["height"]}:{pad_x}:{pad_y}[padded];'
+        f'[scaled]pad={pad_width}:{pad_height}:{pad_x}:{pad_y}[padded];'
         '[padded][1:v]overlay=0:0',
         '-c:v', 'libx264',
         '-c:a', 'copy',
-        '-y',  # Overwrite output file if it exists
+        '-y',
         output_video
     ]
     
-    subprocess.run(cmd)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise Exception(f"FFmpeg error: {result.stderr}")
+    except Exception as e:
+        print(f"Error during video processing: {str(e)}")
+        raise
