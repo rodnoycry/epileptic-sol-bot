@@ -10,7 +10,7 @@ load_dotenv()
 
 # Environment variables
 IS_PROD = os.getenv('IS_PROD') == "true"
-BOT_TOKEN = os.getenv('BOT_TOKEN' if IS_PROD else 'DEV_BOT_TOKN')
+BOT_TOKEN = os.getenv('BOT_TOKEN' if IS_PROD else 'DEV_BOT_TOKEN')
 SOLANA_ADDRESS = os.getenv('SOLANA_ADDRESS')
 CONTRACT_ADDRESS = os.getenv('CONTRACT_ADDRESS')
 SUPPORT_USERNAME = os.getenv('SUPPORT_USERNAME')

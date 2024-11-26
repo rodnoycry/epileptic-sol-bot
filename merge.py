@@ -43,47 +43,28 @@ def get_image_dimensions(image_path):
     }
 
 def create_overlay_video(input_video, overlay_image, output_video):
-    """Create a video with PNG overlay while maintaining PNG's aspect ratio"""
+    """
+    Create a video with PNG overlay maintaining the overlay image's dimensions
+    and replacing transparency with video
+    """
     
     # Get dimensions
     video_info = get_video_info(input_video)
     image_info = get_image_dimensions(overlay_image)
     
-    # Calculate scaling factors to fit video to image
-    scale_w = image_info['width'] / video_info['width']
-    scale_h = image_info['height'] / video_info['height']
-    
-    # Determine the appropriate scaling approach
-    if scale_w > scale_h:
-        # Fit to width
-        new_width = image_info['width']
-        new_height = int(video_info['height'] * scale_w)
-    else:
-        # Fit to height
-        new_height = image_info['height']
-        new_width = int(video_info['width'] * scale_h)
-    
-    # Ensure dimensions are even (required by some codecs)
-    new_width = (new_width + 1) & ~1
-    new_height = (new_height + 1) & ~1
-    
-    # Calculate padding
-    pad_width = max(new_width, image_info['width'])
-    pad_height = max(new_height, image_info['height'])
-    pad_x = (pad_width - new_width) // 2
-    pad_y = (pad_height - new_height) // 2
-    
+    # Resize video to match overlay image dimensions
     cmd = [
         'ffmpeg', '-y',
         '-i', input_video,
         '-i', overlay_image,
-        '-filter_complex',
-        f'[0:v]scale={new_width}:{new_height}[scaled];'
-        f'[scaled]pad={pad_width}:{pad_height}:{pad_x}:{pad_y}[padded];'
-        '[padded][1:v]overlay=0:0',
+        '-filter_complex', 
+        # Resize video to match overlay image, maintaining aspect ratio
+        f'[0:v]scale={image_info["width"]}:{image_info["height"]}:force_original_aspect_ratio=decrease,pad={image_info["width"]}:{image_info["height"]}:(ow-iw)/2:(oh-ih)/2[bg];'
+        # Overlay the PNG on top of the resized video
+        '[bg][1:v]overlay=0:0:enable=\'between(t,0,999999)\'',
         '-c:v', 'libx264',
         '-c:a', 'copy',
-        '-y',
+        '-pix_fmt', 'yuv420p',
         output_video
     ]
     
@@ -91,6 +72,7 @@ def create_overlay_video(input_video, overlay_image, output_video):
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
             raise Exception(f"FFmpeg error: {result.stderr}")
+        print(f"Overlay video created successfully: {output_video}")
     except Exception as e:
         print(f"Error during video processing: {str(e)}")
         raise
