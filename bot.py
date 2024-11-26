@@ -9,7 +9,8 @@ from logger import logger
 load_dotenv()
 
 # Environment variables
-BOT_TOKEN = os.getenv('BOT_TOKEN')
+IS_PROD = os.getenv('IS_PROD') == "true"
+BOT_TOKEN = os.getenv('BOT_TOKEN' if IS_PROD else 'DEV_BOT_TOKN')
 SOLANA_ADDRESS = os.getenv('SOLANA_ADDRESS')
 CONTRACT_ADDRESS = os.getenv('CONTRACT_ADDRESS')
 SUPPORT_USERNAME = os.getenv('SUPPORT_USERNAME')
