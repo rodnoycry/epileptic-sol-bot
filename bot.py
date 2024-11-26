@@ -1,21 +1,10 @@
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import os
-from dotenv import load_dotenv
 from merge import create_overlay_video
 from logger import logger
-
-# Load environment variables
-load_dotenv()
-
-# Environment variables
-IS_PROD = os.getenv('IS_PROD') == "true"
-BOT_TOKEN = os.getenv('BOT_TOKEN' if IS_PROD else 'DEV_BOT_TOKEN')
-SOLANA_ADDRESS = os.getenv('SOLANA_ADDRESS')
-CONTRACT_ADDRESS = os.getenv('CONTRACT_ADDRESS')
-SUPPORT_USERNAME = os.getenv('SUPPORT_USERNAME')
-MEMECOIN_CHAT = os.getenv('MEMECOIN_CHAT')
-BACKGROUND_VIDEO_PATH = os.getenv('BACKGROUND_VIDEO_PATH')
+from config import BOT_TOKEN, SOLANA_ADDRESS, CONTRACT_ADDRESS, SUPPORT_USERNAME, MEMECOIN_CHAT, BACKGROUND_VIDEO_PATH
+from message_handler import handle_message
 
 # States
 WAITING_FOR_PNG = 1
@@ -65,97 +54,6 @@ def send_usage_instructions(update: Update):
         f"Need help? Contact {SUPPORT_USERNAME}",
         parse_mode="markdown"
     )
-
-
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    is_group_chat = update.message.chat.type in ['group', 'supergroup']
-
-    # Check if bot should respond in group chat
-    if is_group_chat:
-        bot_username = context.bot.username
-        message_mentions_bot = False
-        
-        # Check message text or caption for bot mention
-        message_text = update.message.text or update.message.caption or ""
-        
-        # Check text mentions in message or caption
-        entities = update.message.entities or update.message.caption_entities or []
-        for entity in entities:
-            if entity.type == 'mention':
-                mentioned_username = message_text[entity.offset:entity.offset + entity.length]
-                if mentioned_username == f"@{bot_username}":
-                    message_mentions_bot = True
-                    break
-        
-        # Check if bot was replied to
-        if update.message.reply_to_message and update.message.reply_to_message.from_user.id == context.bot.id:
-            message_mentions_bot = True
-
-        # If bot wasn't mentioned in group chat, return
-        if not message_mentions_bot:
-            return
-
-    # Handle PNG file
-    if update.message.document and update.message.document.file_name.lower().endswith('.png'):
-        logger.info(f"User {user_id} sent a PNG file")
-        # Download the file
-        file = await context.bot.get_file(update.message.document.file_id)
-        input_path = os.path.abspath(f"temp/temp_{user_id}.png")
-        output_path = os.path.abspath(f"output/output_{user_id}.mp4")
-        await file.download_to_drive(input_path)
-
-        # Only send processing message in private chats
-        if not is_group_chat:
-            await update.message.reply_text("🎬 Processing your image... Please wait.")
-
-        try:
-            # Your video generation function here
-            create_overlay_video(BACKGROUND_VIDEO_PATH, input_path, output_path)
-
-            # Send the generated video
-            with open(output_path, 'rb') as video:
-                await update.message.reply_video(video)
-                # Only send success message in private chats
-                if not is_group_chat:
-                    await update.message.reply_text("That's it! Download the video, share it or use a profile pic\n\nShow the 🟥🟩 to the world!")
-            
-            logger.info(f"Successfully processed video for user {user_id}")
-            
-            # Cleanup
-            os.remove(input_path)
-            os.remove(output_path)
-
-        except Exception as e:
-            logger.error(f"Error processing video for user {user_id}: {str(e)}")
-            # Send error message in both private and group chats
-            await update.message.reply_text(
-                f"❌ Sorry, something went wrong. Please try again or contact {SUPPORT_USERNAME} for support.",
-                parse_mode="markdown"
-            )
-
-    # Handle photo (PNG sent as image)
-    elif update.message.photo:
-        logger.info(f"User {user_id} sent a photo instead of file")
-        # Send warning in both private and group chats
-        await update.message.reply_text(
-            "⚠️ Please send your PNG image as a file, not as a photo!\n\n"
-            "This is important because sending as a photo will compress the image "
-            "and remove transparency.\n\n"
-            "How to send as file:\n"
-            "1. Click the file attachment icon (📎)\n"
-            "2. Select 'File'\n"
-            "3. Choose your PNG image\n"
-            "4. Send it to the bot without compression",
-            parse_mode="markdown"
-        )
-    
-    # Handle all other incorrect messages
-    else:
-        logger.info(f"User {user_id} sent an invalid message type")
-        # Send usage instructions in both private and group chats
-        await send_usage_instructions(update)
-
 
 def main():
     # Create required directories
