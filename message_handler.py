@@ -58,6 +58,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Handle PNG file (existing logic)
     if update.message.document and update.message.document.file_name.lower().endswith('.png'):
         logger.info(f"User {user_id} sent a PNG file")
+        if not is_group_chat:
+            await update.message.reply_text("🎬 Processing your image... Please wait.")
         # Download the file
         file = await context.bot.get_file(update.message.document.file_id)
         input_path = os.path.abspath(f"temp/temp_{user_id}.png")
@@ -80,6 +82,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Handle photo (image sent directly)
     elif update.message.photo:
         logger.info(f"User {user_id} sent a photo")
+
+        # Only send processing message in private chats
+        if not is_group_chat:
+            await update.message.reply_text("🎬 Processing your image... Please wait.")
         
         # Get the largest photo (highest resolution)
         photo_file = await context.bot.get_file(update.message.photo[-1].file_id)
@@ -95,10 +101,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             # Remove background
             await remove_background(input_path, bg_removed_path)
-
-            # Only send processing message in private chats
-            if not is_group_chat:
-                await update.message.reply_text("🎬 Processing your image... Please wait.")
 
             # Create video with background-removed image
             create_overlay_video(BACKGROUND_VIDEO_PATH, bg_removed_path, output_path)

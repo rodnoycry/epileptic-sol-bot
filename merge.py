@@ -55,8 +55,6 @@ def create_overlay_video(input_video: str, overlay_image: str, output_video: str
         if process.returncode != 0:
             raise Exception(f"FFmpeg error: {stderr.decode()}")
 
-        print(f"Successfully created overlay video: {output_video}")
-
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         raise
