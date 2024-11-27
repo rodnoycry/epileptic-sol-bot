@@ -1,78 +1,63 @@
 import subprocess
-import json
+from PIL import Image
 
-def get_video_info(video_path):
-    """Get video dimensions and duration using ffprobe"""
-    cmd = [
-        'ffprobe',
-        '-v', 'quiet',
-        '-print_format', 'json',
-        '-show_format',
-        '-show_streams',
-        video_path
-    ]
-    
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    data = json.loads(result.stdout)
-    
-    # Find video stream
-    video_stream = next(s for s in data['streams'] if s['codec_type'] == 'video')
-    
-    return {
-        'width': int(video_stream['width']),
-        'height': int(video_stream['height']),
-        'duration': float(data['format']['duration'])
-    }
-
-def get_image_dimensions(image_path):
-    """Get PNG image dimensions using ffprobe"""
-    cmd = [
-        'ffprobe',
-        '-v', 'quiet',
-        '-print_format', 'json',
-        '-show_streams',
-        image_path
-    ]
-    
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    data = json.loads(result.stdout)
-    
-    return {
-        'width': int(data['streams'][0]['width']),
-        'height': int(data['streams'][0]['height'])
-    }
-
-def create_overlay_video(input_video, overlay_image, output_video):
+def create_overlay_video(input_video: str, overlay_image: str, output_video: str):
     """
-    Create a video with PNG overlay maintaining the overlay image's dimensions
-    and replacing transparency with video
+    Create a video with an overlay PNG image where transparency shows the video background.
+    The output video will have the same dimensions as the PNG image (adjusted to even numbers).
+    
+    Args:
+        input_video (str): Path to the input video file
+        overlay_image (str): Path to the PNG image with transparency
+        output_video (str): Path where the output video will be saved
     """
-    
-    # Get dimensions
-    video_info = get_video_info(input_video)
-    image_info = get_image_dimensions(overlay_image)
-    
-    # Resize video to match overlay image dimensions
-    cmd = [
-        'ffmpeg', '-y',
-        '-i', input_video,
-        '-i', overlay_image,
-        '-filter_complex', 
-        # Resize video to match overlay image, maintaining aspect ratio
-        f'[0:v]scale={image_info["width"]}:{image_info["height"]}:force_original_aspect_ratio=decrease,pad={image_info["width"]}:{image_info["height"]}:(ow-iw)/2:(oh-ih)/2[bg];'
-        # Overlay the PNG on top of the resized video
-        '[bg][1:v]overlay=0:0:enable=\'between(t,0,999999)\'',
-        '-c:v', 'libx264',
-        '-c:a', 'copy',
-        '-pix_fmt', 'yuv420p',
-        output_video
-    ]
-    
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        if result.returncode != 0:
-            raise Exception(f"FFmpeg error: {result.stderr}")
-        print(f"Overlay video created successfully: {output_video}")
+        # Get overlay image dimensions
+        with Image.open(overlay_image) as img:
+            overlay_width, overlay_height = img.size
+            
+        # Ensure dimensions are even
+        overlay_width = overlay_width + (overlay_width % 2)
+        overlay_height = overlay_height + (overlay_height % 2)
+
+        # Construct the FFmpeg command
+        command = [
+            'ffmpeg',
+            '-i', input_video,  # Input video
+            '-i', overlay_image,  # Overlay image
+            '-filter_complex',
+            f'''
+            [0:v]scale={overlay_width}:{overlay_height}:force_original_aspect_ratio=increase,
+            crop={overlay_width}:{overlay_height},
+            setsar=1[bg];
+            [bg][1:v]overlay=0:0:format=auto,
+            scale={overlay_width}:{overlay_height},
+            format=yuv420p
+            ''',
+            '-c:v', 'libx264',  # Use H.264 codec
+            '-preset', 'medium',  # Encoding preset
+            '-crf', '23',  # Quality setting
+            '-y',  # Overwrite output file if it exists
+            output_video
+        ]
+
+        # Execute the FFmpeg command
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        
+        # Wait for the process to complete and get output
+        _stdout, stderr = process.communicate()
+
+        # Check if the process was successful
+        if process.returncode != 0:
+            raise Exception(f"FFmpeg error: {stderr.decode()}")
+
+        print(f"Successfully created overlay video: {output_video}")
+
     except Exception as e:
-        print(f"Error during video processing: {str(e)}")
+        print(f"An error occurred: {str(e)}")
         raise
+

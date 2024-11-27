@@ -1,7 +1,6 @@
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import os
-from merge import create_overlay_video
 from logger import logger
 from config import BOT_TOKEN, SOLANA_ADDRESS, CONTRACT_ADDRESS, SUPPORT_USERNAME, MEMECOIN_CHAT, BACKGROUND_VIDEO_PATH
 from message_handler import handle_message

@@ -62,11 +62,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         file = await context.bot.get_file(update.message.document.file_id)
         input_path = os.path.abspath(f"temp/temp_{user_id}.png")
         output_path = os.path.abspath(f"output/output_{user_id}.mp4")
+        background_video_path = os.path.abspath(BACKGROUND_VIDEO_PATH)
         await file.download_to_drive(input_path)
 
         # Process PNG file (same as before)
         try:
-            create_overlay_video(BACKGROUND_VIDEO_PATH, input_path, output_path)
+            create_overlay_video(background_video_path, input_path, output_path)
             await send_video_response(update, output_path, is_group_chat)
             
             # Cleanup
