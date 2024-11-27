@@ -2,8 +2,8 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import os
 from logger import logger
-from config import BOT_TOKEN, SOLANA_ADDRESS, CONTRACT_ADDRESS, SUPPORT_USERNAME, MEMECOIN_CHAT, BACKGROUND_VIDEO_PATH
-from message_handler import handle_message
+from config import BOT_TOKEN, SOLANA_ADDRESS, CONTRACT_ADDRESS, SUPPORT_USERNAME, MEMECOIN_CHAT
+from image_message_handler import handle_message_with_image
 
 # States
 WAITING_FOR_PNG = 1
@@ -74,8 +74,8 @@ def main():
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CommandHandler('help', help))
     application.add_handler(MessageHandler(
-        (filters.Document.ALL | filters.PHOTO | filters.TEXT | filters.Sticker.STATIC) & private_or_mentioned_in_group_filter,
-        handle_message
+        (filters.Document.IMAGE | filters.PHOTO | filters.TEXT | filters.Sticker.STATIC) & private_or_mentioned_in_group_filter,
+        handle_message_with_image
     ))
     logger.info("Bot started successfully")
     application.run_polling()

@@ -1,19 +1,19 @@
 import subprocess
 from PIL import Image
 
-def create_overlay_video(input_video: str, overlay_image: str, output_video: str):
+def create_overlay_video_from_image(background_video_path: str, overlay_image_path: str, output_video_path: str):
     """
     Create a video with an overlay PNG image where transparency shows the video background.
     The output video will have the same dimensions as the PNG image (adjusted to even numbers).
     
     Args:
-        input_video (str): Path to the input video file
-        overlay_image (str): Path to the PNG image with transparency
-        output_video (str): Path where the output video will be saved
+        background_video_path (str): Path to the input video file
+        overlay_image_path (str): Path to the PNG image with transparency
+        output_video_path (str): Path where the output video will be saved
     """
     try:
         # Get overlay image dimensions
-        with Image.open(overlay_image) as img:
+        with Image.open(overlay_image_path) as img:
             overlay_width, overlay_height = img.size
             
         # Ensure dimensions are even
@@ -23,8 +23,8 @@ def create_overlay_video(input_video: str, overlay_image: str, output_video: str
         # Construct the FFmpeg command
         command = [
             'ffmpeg',
-            '-i', input_video,  # Input video
-            '-i', overlay_image,  # Overlay image
+            '-i', background_video_path,  # Input video
+            '-i', overlay_image_path,  # Overlay image
             '-filter_complex',
             f'''
             [0:v]scale={overlay_width}:{overlay_height}:force_original_aspect_ratio=increase,
@@ -38,7 +38,7 @@ def create_overlay_video(input_video: str, overlay_image: str, output_video: str
             '-preset', 'medium',  # Encoding preset
             '-crf', '23',  # Quality setting
             '-y',  # Overwrite output file if it exists
-            output_video
+            output_video_path
         ]
 
         # Execute the FFmpeg command
