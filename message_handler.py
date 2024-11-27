@@ -40,8 +40,30 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     transparent_image_path = None
     timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d_%H%M%S_%f')
 
+    # Handle image
+    if update.message.photo:
+        if not is_group_chat:
+            await update.message.reply_text("🎬 Processing your image... Please wait.")
+            
+        logger.info(f"User {user_id} sent a photo")
+        photo_file = await context.bot.get_file(update.message.photo[-1].file_id)
+        file_extension = photo_file.file_path.split('.')[-1]
+        
+        downloaded_image_path = os.path.abspath(f"temp/temp_{user_id}_{timestamp}.{file_extension}")
+        image_with_removed_bg_path = os.path.abspath(f"temp/bg_removed_{user_id}_{timestamp}.{file_extension}")
+        
+        try:
+            await photo_file.download_to_drive(downloaded_image_path)
+            resize_image_if_needed(downloaded_image_path)
+            await remove_background(downloaded_image_path, image_with_removed_bg_path)
+
+        except Exception as e:
+            await handle_processing_error(update, user_id, e)
+            
+        transparent_image_path = image_with_removed_bg_path
+
     # Handle file
-    if update.message.document and update.message.document.file_name.split('.')[-1].lower() in ["png", "jpg", "jpeg"]:
+    elif update.message.document and update.message.document.file_name.split('.')[-1].lower() in ["png", "jpg", "jpeg"]:
         if not is_group_chat:
             await update.message.reply_text("🎬 Processing your image... Please wait.")
             
@@ -65,29 +87,29 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 
             os.remove(downloaded_image_path)
             transparent_image_path = image_with_removed_bg_path
-
-    # Handle image
-    elif update.message.photo:
-        if not is_group_chat:
-            await update.message.reply_text("🎬 Processing your image... Please wait.")
-            
-        logger.info(f"User {user_id} sent a photo")
-        photo_file = await context.bot.get_file(update.message.photo[-1].file_id)
-        file_extension = photo_file.file_path.split('.')[-1]
-        
-        downloaded_image_path = os.path.abspath(f"temp/temp_{user_id}_{timestamp}.{file_extension}")
-        image_with_removed_bg_path = os.path.abspath(f"temp/bg_removed_{user_id}_{timestamp}.{file_extension}")
+    
+    # Handle sticker
+    elif update.message.sticker:
+        # Generate unique filenames
+        temp_sticker = f"temp/sticker_{user_id}_{timestamp}.webp"
+        temp_png = f"temp/sticker_{user_id}_{timestamp}.png"
         
         try:
-            await photo_file.download_to_drive(downloaded_image_path)
-            resize_image_if_needed(downloaded_image_path)
-            await remove_background(downloaded_image_path, image_with_removed_bg_path)
-
+            # Download sticker file
+            sticker_file = await update.message.sticker.get_file()
+            await sticker_file.download_to_drive(temp_sticker)
+            
+            # Convert WebP to PNG
+            with Image.open(temp_sticker) as img:
+                # If the image doesn't have transparency, add an alpha channel
+                if img.mode != 'RGBA':
+                    img = img.convert('RGBA')
+                img.save(temp_png, 'PNG')
+                
+            transparent_image_path = temp_png
         except Exception as e:
             await handle_processing_error(update, user_id, e)
-            
-        transparent_image_path = image_with_removed_bg_path
-    
+
     else:
         logger.info(f"User {user_id} sent an invalid message type")
         # Send usage instructions in both private and group chats

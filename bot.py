@@ -66,12 +66,15 @@ def main():
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CommandHandler('help', help))
     application.add_handler(MessageHandler(
-        (filters.Document.ALL | filters.PHOTO | filters.TEXT) & 
+        (filters.Document.ALL | filters.PHOTO | filters.TEXT | filters.Sticker.STATIC) & 
         (filters.ChatType.PRIVATE | 
-         ((filters.ChatType.GROUP | filters.ChatType.GROUPS | filters.ChatType.SUPERGROUP) & (filters.Entity("mention") | filters.CaptionEntity("mention") | filters.REPLY))),
+            (
+                (filters.ChatType.GROUP | filters.ChatType.GROUPS | filters.ChatType.SUPERGROUP) & 
+                (filters.Entity("mention") | filters.CaptionEntity("mention") | filters.REPLY)
+            )
+        ),
         handle_message
     ))
-
     logger.info("Bot started successfully")
     application.run_polling()
 
