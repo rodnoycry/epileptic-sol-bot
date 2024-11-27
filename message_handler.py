@@ -2,6 +2,9 @@ import os
 from telegram import Update
 from telegram.ext import ContextTypes
 import rembg
+from PIL import Image
+import time
+import datetime
 
 # Assuming these are defined elsewhere in your code
 from merge import create_overlay_video
@@ -33,75 +36,85 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Check if bot should respond in group chat
     if is_group_chat and not get_is_message_mentions_bot(update, context):
         return
-
-    # Handle PNG file (existing logic)
-    if update.message.document and update.message.document.file_name.lower().endswith('.png'):
-        logger.info(f"User {user_id} sent a PNG file")
-        if not is_group_chat:
-            await update.message.reply_text("🎬 Processing your image... Please wait.")
-        # Download the file
-        file = await context.bot.get_file(update.message.document.file_id)
-        input_path = os.path.abspath(f"temp/temp_{user_id}.png")
-        output_path = os.path.abspath(f"output/output_{user_id}.mp4")
-        background_video_path = os.path.abspath(BACKGROUND_VIDEO_PATH)
-        await file.download_to_drive(input_path)
-        resize_image_if_needed(input_path)
-
-        # Process PNG file (same as before)
-        try:
-            create_overlay_video(background_video_path, input_path, output_path)
-            await send_video_response(update, output_path, is_group_chat)
-            
-            # Cleanup
-            os.remove(input_path)
-            os.remove(output_path)
-
-        except Exception as e:
-            await handle_processing_error(update, user_id, e)
-
-    # Handle photo (image sent directly)
-    elif update.message.photo:
-        logger.info(f"User {user_id} sent a photo")
-
-        # Only send processing message in private chats
-        if not is_group_chat:
-            await update.message.reply_text("🎬 Processing your image... Please wait.")
-        
-        # Get the largest photo (highest resolution)
-        photo_file = await context.bot.get_file(update.message.photo[-1].file_id)
-        
-        # Paths for processing
-        input_path = os.path.abspath(f"temp/temp_{user_id}.png")
-        bg_removed_path = os.path.abspath(f"temp/bg_removed_{user_id}.png")
-        output_path = os.path.abspath(f"output/output_{user_id}.mp4")
-
-        try:
-            # Download the original photo
-            await photo_file.download_to_drive(input_path)
-            resize_image_if_needed(input_path)
-
-            # Remove background
-            await remove_background(input_path, bg_removed_path)
-
-            # Create video with background-removed image
-            create_overlay_video(BACKGROUND_VIDEO_PATH, bg_removed_path, output_path)
-
-            # Send the generated video
-            await send_video_response(update, output_path, is_group_chat)
-            
-            # Cleanup
-            os.remove(input_path)
-            os.remove(bg_removed_path)
-            os.remove(output_path)
-
-        except Exception as e:
-            await handle_processing_error(update, user_id, e)
     
-    # Handle all other incorrect messages
+    transparent_image_path = None
+    timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d_%H%M%S_%f')
+
+    # Handle file
+    if update.message.document and update.message.document.file_name.split('.')[-1].lower() in ["png", "jpg", "jpeg"]:
+        if not is_group_chat:
+            await update.message.reply_text("🎬 Processing your image... Please wait.")
+            
+        logger.info(f"User {user_id} sent a file")
+        file_extension = update.message.document.file_name.split('.')[-1]
+        
+        downloaded_image_path = os.path.abspath(f"temp/temp_{user_id}_{timestamp}.{file_extension}")
+        file = await context.bot.get_file(update.message.document.file_id)
+        await file.download_to_drive(downloaded_image_path)
+        resize_image_if_needed(downloaded_image_path)
+        
+        if file_extension.lower() == 'png' and has_transparency_alpha(downloaded_image_path):
+            transparent_image_path = downloaded_image_path
+        else:
+            image_with_removed_bg_path = os.path.abspath(f"temp/bg_removed_{user_id}.png")
+            
+            try:
+                await remove_background(downloaded_image_path, image_with_removed_bg_path)
+            except Exception as e:
+                await handle_processing_error(update, user_id, e)
+                
+            os.remove(downloaded_image_path)
+            transparent_image_path = image_with_removed_bg_path
+
+    # Handle image
+    elif update.message.photo:
+        if not is_group_chat:
+            await update.message.reply_text("🎬 Processing your image... Please wait.")
+            
+        logger.info(f"User {user_id} sent a photo")
+        photo_file = await context.bot.get_file(update.message.photo[-1].file_id)
+        file_extension = photo_file.file_path.split('.')[-1]
+        
+        downloaded_image_path = os.path.abspath(f"temp/temp_{user_id}_{timestamp}.{file_extension}")
+        image_with_removed_bg_path = os.path.abspath(f"temp/bg_removed_{user_id}_{timestamp}.{file_extension}")
+        
+        try:
+            await photo_file.download_to_drive(downloaded_image_path)
+            resize_image_if_needed(downloaded_image_path)
+            await remove_background(downloaded_image_path, image_with_removed_bg_path)
+
+        except Exception as e:
+            await handle_processing_error(update, user_id, e)
+            
+        transparent_image_path = image_with_removed_bg_path
+    
     else:
         logger.info(f"User {user_id} sent an invalid message type")
         # Send usage instructions in both private and group chats
         await send_usage_instructions(update)
+        return
+        
+    if not transparent_image_path:
+        logger.info(f"User {user_id}: Unhandled case, 'transparent_image_path' is empty")
+        # Send usage instructions in both private and group chats
+        await send_usage_instructions(update)
+        return
+    
+    # Process Image
+    try:
+        output_path = os.path.abspath(f"output/output_{user_id}_{timestamp}.mp4")
+        background_video_path = os.path.abspath(BACKGROUND_VIDEO_PATH)
+        create_overlay_video(background_video_path, transparent_image_path, output_path)
+        await send_video_response(update, output_path, is_group_chat)
+        
+        # Cleanup
+        os.remove(transparent_image_path)
+        os.remove(output_path)
+
+    except Exception as e:
+        await handle_processing_error(update, user_id, e)
+        return
+    
         
 def get_is_message_mentions_bot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     bot_username = context.bot.username
@@ -125,6 +138,13 @@ def get_is_message_mentions_bot(update: Update, context: ContextTypes.DEFAULT_TY
         
     return message_mentions_bot
 
+def has_transparency_alpha(image_path):
+    with Image.open(image_path) as img:
+        if img.mode == "RGBA":
+            extrema = img.getextrema()
+            if extrema[3][0] < 255:  # Check if minimum alpha value is less than 255
+                return True
+    return False
 
 async def send_video_response(update, output_path, is_group_chat):
     """
