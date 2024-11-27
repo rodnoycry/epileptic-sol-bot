@@ -1,13 +1,13 @@
 import os
-import logging
 from telegram import Update
 from telegram.ext import ContextTypes
-import rembg  # Add rembg import
+import rembg
 
 # Assuming these are defined elsewhere in your code
 from merge import create_overlay_video
 from logger import logger
 from config import BACKGROUND_VIDEO_PATH, SUPPORT_USERNAME
+from resize_image import resize_image_if_needed
 
 async def remove_background(input_path, output_path):
     """
@@ -66,6 +66,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         output_path = os.path.abspath(f"output/output_{user_id}.mp4")
         background_video_path = os.path.abspath(BACKGROUND_VIDEO_PATH)
         await file.download_to_drive(input_path)
+        resize_image_if_needed(input_path)
 
         # Process PNG file (same as before)
         try:
@@ -98,6 +99,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             # Download the original photo
             await photo_file.download_to_drive(input_path)
+            resize_image_if_needed(input_path)
 
             # Remove background
             await remove_background(input_path, bg_removed_path)
