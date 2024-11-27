@@ -31,29 +31,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     is_group_chat = update.message.chat.type in ['group', 'supergroup']
 
     # Check if bot should respond in group chat
-    if is_group_chat:
-        bot_username = context.bot.username
-        message_mentions_bot = False
-        
-        # Check message text or caption for bot mention
-        message_text = update.message.text or update.message.caption or ""
-        
-        # Check text mentions in message or caption
-        entities = update.message.entities or update.message.caption_entities or []
-        for entity in entities:
-            if entity.type == 'mention':
-                mentioned_username = message_text[entity.offset:entity.offset + entity.length]
-                if mentioned_username == f"@{bot_username}":
-                    message_mentions_bot = True
-                    break
-        
-        # Check if bot was replied to
-        if update.message.reply_to_message and update.message.reply_to_message.from_user.id == context.bot.id:
-            message_mentions_bot = True
-
-        # If bot wasn't mentioned in group chat, return
-        if not message_mentions_bot:
-            return
+    if is_group_chat and not get_is_message_mentions_bot(update, context):
+        return
 
     # Handle PNG file (existing logic)
     if update.message.document and update.message.document.file_name.lower().endswith('.png'):
@@ -123,6 +102,29 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.info(f"User {user_id} sent an invalid message type")
         # Send usage instructions in both private and group chats
         await send_usage_instructions(update)
+        
+def get_is_message_mentions_bot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    bot_username = context.bot.username
+    message_mentions_bot = False
+    
+    # Check message text or caption for bot mention
+    message_text = update.message.text or update.message.caption or ""
+    
+    # Check text mentions in message or caption
+    entities = update.message.entities or update.message.caption_entities or []
+    for entity in entities:
+        if entity.type == 'mention':
+            mentioned_username = message_text[entity.offset:entity.offset + entity.length]
+            if mentioned_username == f"@{bot_username}":
+                message_mentions_bot = True
+                break
+    
+    # Check if bot was replied to
+    if update.message.reply_to_message and update.message.reply_to_message.from_user.id == context.bot.id:
+        message_mentions_bot = True
+        
+    return message_mentions_bot
+
 
 async def send_video_response(update, output_path, is_group_chat):
     """
