@@ -75,7 +75,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await file.download_to_drive(downloaded_image_path)
         resize_image_if_needed(downloaded_image_path)
         
-        if file_extension.lower() == 'png' and has_transparency_alpha(downloaded_image_path):
+        if file_extension.lower() == 'png' and png_has_transpare(downloaded_image_path):
             transparent_image_path = downloaded_image_path
         else:
             image_with_removed_bg_path = os.path.abspath(f"temp/bg_removed_{user_id}.png")
@@ -90,6 +90,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Handle sticker
     elif update.message.sticker:
+        if not is_group_chat:
+            await update.message.reply_text("🎬 Processing sticker... Please wait.")
+            
         # Generate unique filenames
         temp_sticker = f"temp/sticker_{user_id}_{timestamp}.webp"
         temp_png = f"temp/sticker_{user_id}_{timestamp}.png"
@@ -106,7 +109,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     img = img.convert('RGBA')
                 img.save(temp_png, 'PNG')
                 
-            transparent_image_path = temp_png
+        
+            if png_has_transpare(temp_png):
+                transparent_image_path = temp_png
+            else:
+                image_with_removed_bg_path = os.path.abspath(f"temp/bg_removed_{user_id}.png")
+                
+                try:
+                    await remove_background(temp_png, image_with_removed_bg_path)
+                except Exception as e:
+                    await handle_processing_error(update, user_id, e)
+            
+                transparent_image_path = image_with_removed_bg_path
+                os.remove(temp_png)
+                    
+            os.remove(temp_sticker)
+                
         except Exception as e:
             await handle_processing_error(update, user_id, e)
 
@@ -160,7 +178,7 @@ def get_is_message_mentions_bot(update: Update, context: ContextTypes.DEFAULT_TY
         
     return message_mentions_bot
 
-def has_transparency_alpha(image_path):
+def png_has_transpare(image_path):
     with Image.open(image_path) as img:
         if img.mode == "RGBA":
             extrema = img.getextrema()
