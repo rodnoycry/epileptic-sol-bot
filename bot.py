@@ -58,6 +58,14 @@ def main():
     # Create required directories
     os.makedirs('temp', exist_ok=True)
     os.makedirs('output', exist_ok=True)
+    
+    private_or_mentioned_in_group_filter = (
+        filters.ChatType.PRIVATE |
+        (
+            (filters.ChatType.GROUP | filters.ChatType.GROUPS | filters.ChatType.SUPERGROUP) & 
+            (filters.Entity("mention") | filters.CaptionEntity("mention") | filters.REPLY)
+        )
+    )
 
     logger.info("Starting bot...")
     application = Application.builder().token(BOT_TOKEN).build()
@@ -66,13 +74,7 @@ def main():
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CommandHandler('help', help))
     application.add_handler(MessageHandler(
-        (filters.Document.ALL | filters.PHOTO | filters.TEXT | filters.Sticker.STATIC) & 
-        (filters.ChatType.PRIVATE | 
-            (
-                (filters.ChatType.GROUP | filters.ChatType.GROUPS | filters.ChatType.SUPERGROUP) & 
-                (filters.Entity("mention") | filters.CaptionEntity("mention") | filters.REPLY)
-            )
-        ),
+        (filters.Document.ALL | filters.PHOTO | filters.TEXT | filters.Sticker.STATIC) & private_or_mentioned_in_group_filter,
         handle_message
     ))
     logger.info("Bot started successfully")
